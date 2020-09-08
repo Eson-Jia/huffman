@@ -1,5 +1,5 @@
 use std::cmp::Ordering;
-use std::collections::{BinaryHeap, LinkedList};
+use std::collections::{BinaryHeap, LinkedList, HashMap};
 use std::iter::FromIterator;
 
 
@@ -13,10 +13,10 @@ pub struct Node {
 
 impl  Node {
     #[inline]
-  pub fn new(inner:char,freq:u32)->Self{
+  pub fn new(inner:char,frequent:u32)->Self{
         Node{
             inner,
-            frequent: 0,
+            frequent,
             left: None,
             right: None,
         }
@@ -36,12 +36,14 @@ impl  Ord for Node {
  }
 
 pub fn build_forest(text:&str)-> Vec<Node>{
+    let mut counter = HashMap::new();
+    for char in text.chars() {
+        let count = counter.entry(char).or_insert(0);
+        *count+=1;
+    }
     let mut the_forest = Vec::new();
-    for i in 0..26 {
-        match std::char::from_u32(97+i) {
-            Some(char)=> the_forest.push(Node::new(char, i+1)),
-            None=> panic!("isn't a ascii"),
-        }
+    for (char,freq) in counter {
+        the_forest.push(Node::new(char, freq));
     }
     the_forest
 }
