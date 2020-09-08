@@ -1,5 +1,7 @@
 use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashMap};
+use std::fs::{File};
+use std::io::{Read};
 
 
 #[derive(Clone, Eq, PartialEq,Debug)]
@@ -85,15 +87,44 @@ pub fn get_last(root: &Node)->&Node {
     lhs
 }
 
+fn build_code(root:&Node)->HashMap<char,String>{
+    let mut map = HashMap::new();
+    re_build_code(root,&mut map,"");
+    map
+}
+
+fn re_build_code(node:&Node,map:&mut HashMap<char,String>,prefix:&str){
+   if node.is_leaf() {
+       map.insert(node.inner,String::from(prefix));
+       return;
+   }
+    if let Some(left) = node.left.as_ref(){
+        let left = left.as_ref();
+        let mut prefix = prefix.to_string();
+        prefix.push_str("0");
+        re_build_code(left,map,&prefix[..]);
+    }else{
+        panic!("left node is None !");
+    }
+    if let Some(right) = node.right.as_ref(){
+        let right = right.as_ref();
+        let mut prefix = prefix.to_string();
+        prefix.push_str("1");
+        re_build_code(right,map,&prefix[..]);
+    }else {
+        panic!("right node is None !");
+    }
+}
+
 fn main(){
-    let text = "this is the best of time,this is the worst of time";
-    let  root  =  build_trie(build_forest(text));
+    let mut f  = File::open("./text.txt").expect("open text.txt failed");
+    let mut text = String::new();
+    f.read_to_string(& mut text).unwrap();
+    let  root  =  build_trie(build_forest(&text[..]));
     if let Some(root) = root{
-        // println!("{:?}",root);
-        let result= get_last(&root);
-        println!("{:?}",result);
-        let result= get_last(&root);
-        println!("{:?}",result);
+        for (k,v) in build_code(&root){
+            println!("{} --> {}",k,v);
+        }
     };
 }
 
