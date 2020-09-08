@@ -34,6 +34,12 @@ impl  Ord for Node {
      }
  }
 
+impl Node{
+    fn is_leaf(&self)->bool{
+        self.right.is_none()&& self.left.is_none()
+    }
+}
+
 pub fn build_forest(text:&str)-> Vec<Node>{
     let mut counter = HashMap::new();
     for char in text.chars() {
