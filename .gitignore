@@ -1,1 +1,10 @@
 /target
+
+*.jpg
+
+
+debug/
+
+text.bin
+
+text.txt

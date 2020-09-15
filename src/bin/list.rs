@@ -1,7 +1,7 @@
 use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashMap};
 use std::fs::{File};
-use std::io::{Read};
+use std::io::{Read, BufWriter, Write};
 
 
 #[derive(Clone, Eq, PartialEq,Debug)]
@@ -116,15 +116,114 @@ fn re_build_code(node:&Node,map:&mut HashMap<char,String>,prefix:&str){
     }
 }
 
-fn main(){
-    let mut f  = File::open("./text.txt").expect("open text.txt failed");
-    let mut text = String::new();
-    f.read_to_string(& mut text).unwrap();
-    let  root  =  build_trie(build_forest(&text[..]));
-    if let Some(root) = root{
-        for (k,v) in build_code(&root){
-            println!("{} --> {}",k,v);
+struct BinaryWriter {
+    pub out:BufWriter<File>,
+    pub buffer:u8,
+    pub n:u32,
+}
+
+impl BinaryWriter{
+    fn new(out:BufWriter<File>) ->Self{
+        BinaryWriter{
+            out,
+            buffer:0,
+            n:0,
         }
-    };
+    }
+}
+
+impl BinaryWriter {
+    fn clear_buffer(&mut self){
+        if self.n==0{
+            return;
+        }
+        if self.n>0 {
+            self.buffer <<= (8 - self.n) as u8;
+            self.out.write(&[self.buffer,1]).expect("failed in write buffer");
+        }
+        self.n = 0;
+        self.buffer = 0;
+    }
+
+    fn write_bit(&mut self, bit:bool){
+        // if bit{
+        //     print!("1");
+        // }else{
+        //     print!("0");
+        // }
+        self.buffer<<=1;
+        if bit {
+            self.buffer |=1;
+        }
+        self.n+=1;
+        if self.n ==8 {
+            self.clear_buffer();
+        }
+    }
+
+    fn write_byte(& mut self,byte:u8){
+        if self.n ==0{
+            self.out.write(&[byte,1]).expect("failed in write_byte");
+            return;
+        }
+        for i in 0..8 {
+            let bit = ((byte>>(8-i-1))&1) ==1;
+            self.write_bit(bit);
+        }
+    }
+
+    fn close(& mut self){
+        self.flush();
+    }
+
+    fn flush(& mut self){
+        self.clear_buffer();
+        self.out.flush().expect("failed in out.flush");
+    }
+}
+
+// write_trie 前序遍历
+fn write_trie(node:&Node,binary:&mut BinaryWriter){
+    if node.is_leaf(){
+        binary.write_bit(true);
+        if node.inner.is_ascii(){
+            let  char_u8 = node.inner as u8;
+            binary.write_byte(char_u8);
+        }else{
+            panic!("{} isn't a ascii",node.inner);
+        }
+        return;
+    }
+    binary.write_bit(false);
+    let left = node.left.as_ref().expect("").as_ref();
+    write_trie(left,binary);
+    let right = node.right.as_ref().expect("").as_ref();
+    write_trie(right,binary);
+}
+
+
+fn main(){
+    let mut f  = File::open("/home/ubuntu/Documents/text.txt").expect("open text.txt failed");
+    let mut text = String::new();
+    let buf_writer = BufWriter::new(File::create("./text.bin").expect("failed in open file"));
+    let mut binary_writer  = BinaryWriter::new(buf_writer);
+    f.read_to_string(& mut text).unwrap();
+    let  root =  build_trie(build_forest(&text[..])).expect("root is None");
+    let prefix_code = build_code(&root);
+    for (k,v) in &prefix_code{
+        let k = *k;
+        println!("{}/{} --> {}",k as u8,k,v);
+    }
+    write_trie(&root,&mut binary_writer);
+    for char in text.chars(){
+        let  prefix = prefix_code.get(&char).expect("char not found");
+        for code in prefix.chars(){
+            match code {
+                '0'=>binary_writer.write_bit(false),
+                '1'=>binary_writer.write_bit(true),
+                _=>(),
+            }
+        }
+    }
 }
 
